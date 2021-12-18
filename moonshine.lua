@@ -1,12 +1,14 @@
 -- SC engine study: import + initialize
 
---engine.name = 'Moonshine_v1' -- assign the engine to this script's run
+
+--engine.name = 'Moonshine_v0' -- assign the engine to this script's run
+--engine.name = 'Moonshine_v1'
 --engine.name = 'Moonshine_v2'
 engine.name = 'Moonshine_v3'
+s = require 'sequins'
 
 -- our engine's Lua file is assigned a script-scope variable:
 moonshine = include('moonshines/lib/moonshine_engine')
-s = require 'sequins'
 
 function init()
   moonshine.add_params() -- the script adds params via the `.add params()` function

@@ -1,17 +1,14 @@
+// v2 deploys a few more tricks to totally eliminate repetitive declarations of control/parameter/command names.
+// everything is extracted from data in the synthdef itself.
+
 Engine_Moonshine_v2 : CroneEngine {
 	var paramValues;
 	var paramKeys;
-
-	*new { arg context, doneCallback;
-		^super.new(context, doneCallback);
-	}
 
 	alloc {
 		var server = Server.default;
 		var controlNames;
 
-		// add SynthDefs
-		// synthdef identifiers should be Symbols
 		var def = SynthDef(\Moonshine, {
 			arg out=0,
 			freq = 330,
@@ -36,55 +33,39 @@ Engine_Moonshine_v2 : CroneEngine {
 			var signal = Pan2.ar(filter*envelope,pan);
 
 			Out.ar(out,signal);
-
-		});
-
-		def.send(server);
+		}).add;
 
 		// these lines produce a Dictionary mapping modulatable control names to values,
 		// where the values are populated with the defaults specified above.
 		// (.collect/.select are equivalent to .map/.filter in some other languages)
 		//// a ControlName contains both a symbolic key and a positional index
-		//// \out and \freq are controlled separately, so this line filters them out
+		//// \out and \hz are controlled separately, so this line filters them out
 		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
 		//// this line construct a dictionary by first associating ControlName keys to default values from the def
 		paramValues = Dictionary.with(*controlNames.collect({ arg ctl;
 			ctl.name -> def.controls[ctl.index]  // this syntax creates an Association
 		}));
-
-    paramValues.postln;
-    
-		// for each "param," add an engine command,
-		// which sets the current value default value of that param for new synth instances.
-		paramValues.keys.do({ |key|
+		
+		paramValues.keys.do({ arg key;
 			this.addCommand(key, "f", { arg msg;
-	      paramValues[key] = msg[1];
+				paramValues[key] = msg[1];
 			});
 		});
-
-		// the command "hz" will create a new synth with the specifed frequency,
-		// and all other parameters pulled from the param value collection.
+		
 		this.addCommand("hz", "f", { arg msg;
 			var args = [\freq, msg[1]] ++ paramValues.getPairs;
-			args.postln; 
-			Synth.new(\Moonshine, args, Server.default);
+			Synth.new(\Moonshine, args);
 		});
 
-		// add an additional parameter accepting all control values in order
-		// for this to work, we also need to maintain a record of the correct order of control names.
+		// add an additional parameter accepting all control values; in order for this to work,
+		// we need a separate record of the correct order of control names.
 		paramKeys = Array.newClear(controlNames.size);
 		controlNames.do({ arg ctl, idx; paramKeys[idx] = ctl.name });
 		this.addCommand("voice", Array.fill(paramKeys.size+1, {$f}).asString, { arg msg;
-			var args = [\freq, msg[1]]; 
+			var args = [\freq, msg[1]];
 			paramKeys.size.do({ arg idx; args = args ++ [paramKeys[idx], msg[idx+2]]});
-			Synth.new(\Moonshine, args, Server.default);
+			Synth.new(\Moonshine, args);
 		});
-
-		// add an addition
-		// might as well do this here,
-		// so that the engine will not signal that it's ready before synthdefs are available.
-		// (but really (TODO) this should just be done in the caller after every engine init.)
-		server.sync;
 
 	}
 

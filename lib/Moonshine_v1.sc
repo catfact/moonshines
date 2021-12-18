@@ -1,37 +1,24 @@
+// v1: minor cleanups
+
+// these changes remove a little bit of clutter and introduce important language constructs:
+// - iteration
+// - associative collections
+
+// but overall structure is unmodified.
+
 Engine_Moonshine_v1 : CroneEngine {
-// All norns engines follow the 'Engine_MySynthName' convention above
+	var params;
 
-	// Here, we establish variables for our synth, with starting values,
-	//  which our script commands can modify:
-	var freq = 330;
-	var sub_div = 2;
-	var noise_level = 0.1;
-	var cutoff = 8000;
-	var resonance = 3;
-	var attack = 0;
-	var release = 0.4;
-	var amp = 1;
-	var pan = 0;
-	var out = 0;
+    // NB: don't actually need to override base class constructor
 
-// This is your constructor. The 'context' arg is a CroneAudioContext.
-// It provides input and output busses and groups.
-// NO NEED TO MODIFY THIS
-	*new { arg context, doneCallback;
-		^super.new(context, doneCallback);
-	}
-
-// This is called when the engine is actually loaded by a script.
-// You can assume it will be called in a Routine,
-//  and you can use .sync and .wait methods.
-	alloc { // allocate memory to the following:
-
-		// add SynthDefs
+	alloc {
 		SynthDef("Moonshine", {
-			arg freq = freq, sub_div = sub_div, noise_level = noise_level,
-			cutoff = cutoff, resonance = resonance,
-			attack = attack, release = release,
-			amp = amp, pan = pan, out = out;
+			// NB: default args here were not doing anything, b/c always specified at synth creation
+			arg out=0,
+			amp, pan,
+			freq, sub_div, noise_level,
+			cutoff, resonance,
+			attack, release;
 
 			var pulse = Pulse.ar(freq: freq);
 			var saw = Saw.ar(freq: freq);
@@ -45,62 +32,41 @@ Engine_Moonshine_v1 : CroneEngine {
 			var signal = Pan2.ar(filter*envelope,pan);
 
 			Out.ar(out,signal);
-
 		}).add;
 
-		context.server.sync; // syncs our synth definition to the server
+        // create an Dictionary (an unordered associative collection)
+        // to store parameter values, initialized to defaults.
+		params = Dictionary.newFrom([
+			\sub_div, 2,
+			\noise_level, 0.1,
+			\cutoff, 8000,
+			\resonance, 3,
+			\attack, 0,
+			\release, 0.4,
+			\amp, 0.5,
+			\pan, 0;
+		]);
 
-// This is how you add "commands",
-//  which are how the Lua interpreter controls the engine.
-// The format string is analogous to an OSC message format string,
-//  and the 'msg' argument contains data.
-
-		this.addCommand("amp", "f", { arg msg;
-			amp = msg[1];
+        // loop over the keys of the dictionary, 
+        // add a command for which one which updates corresponding value
+		params.keys.do({ arg key;
+			this.addCommand(key, "f", { arg msg;
+				params[key] = msg[1];
+			});
 		});
 
-		this.addCommand("sub_div", "f", { arg msg;
-			sub_div = msg[1];
-		});
-
-		this.addCommand("noise_level", "f", { arg msg;
-			noise_level = msg[1];
-		});
-
-		this.addCommand("cutoff", "f", { arg msg;
-			cutoff = msg[1];
-		});
-
-		this.addCommand("resonance", "f", { arg msg;
-			resonance = msg[1];
-		});
-
-		this.addCommand("attack", "f", { arg msg;
-			attack = msg[1];
-		});
-
-		this.addCommand("release", "f", { arg msg;
-			release = msg[1];
-		});
-
-		this.addCommand("pan", "f", { arg msg;
-			pan = msg[1];
-		});
-
+        // the hz command. new syntax:
+        // .getPairs flattens the dictionary to alternating k,v array
+        // ++ concatenates arrays
 		this.addCommand("hz", "f", { arg msg;
-			Synth("Moonshine", [
-				\freq,msg[1],
-				\amp,amp,
-				\sub_div,sub_div,
-				\noise_level,noise_level,
-				\cutoff,cutoff,
-				\resonance,resonance,
-				\attack,attack,
-				\release,release,
-				\pan,pan,
-				\out,out
-			]);
+			Synth.new("Moonshine", [\freq, msg[1]] ++ params.getPairs)
 		});
+
+        // NB: we don't need to sync with the server in this function,
+        // b/c were not actually doing anything that depends on the synthdef being available.
+        // (the caller may want to wait before signalling that engine construction is complete,
+        // but this needn't be our responsibility.)
+        // Server.default.sync;
 
 	}
 

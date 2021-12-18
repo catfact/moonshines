@@ -1,16 +1,16 @@
+// v3 builds on the decoupling in v2 to introduce a useful class hierarchy:
+// a base engine class which performs all the boilerplate engine stuff,
+// requiring the derived class to just provide the synthdef itself.
+
 CroneEngineOneshot : CroneEngine {
 	var paramValues;
 	var paramKeys;
-
-	*new { arg context, doneCallback;
-		^super.new(context, doneCallback);
-	}
 
 	alloc {
 		var server = Server.default;
 		var controlNames;
 
-		var def = this.voiceDef;
+		var def = this.class.voiceDef;
 
 		def.send(server);
 		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
@@ -19,14 +19,14 @@ CroneEngineOneshot : CroneEngine {
 		}));
 
 		paramValues.keys.do({ |key|
-			this.addCommand(key.toString, "f", { arg msg;
+			this.addCommand(key, "f", { arg msg;
 				paramValues[key] = msg[1];
 			});
 		});
 
 		this.addCommand("hz", "f", { arg msg;
 			var args = [\freq, msg[1]] ++ paramValues.getPairs;
-			Synth.new(\Moonshine, args, Server.default);
+			Synth.new(\Moonshine, args);
 		});
 
 		paramKeys = Array.newClear(controlNames.size);
@@ -35,15 +35,13 @@ CroneEngineOneshot : CroneEngine {
 		this.addCommand("voice", Array.fill(paramKeys.size+1, {$f}).asString, { arg msg;
 			var args = [\freq, msg[1]];
 			paramKeys.size.do({ arg idx; args = args ++ [paramKeys[idx], msg[idx+2]]});
-			Synth.new(\Moonshine, args, Server.default);
+			Synth.new(\Moonshine, args);
 		});
-
-		server.sync;
 	}
 }
 
 Engine_Moonshine_v3 : CroneEngineOneshot {
-	*def {
+	*voiceDef {
 		^SynthDef(\Moonshine, {
 			arg out=0,
 			freq = 330,
