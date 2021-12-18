@@ -13,12 +13,14 @@ CroneEngineOneshot : CroneEngine {
 		var def = this.class.voiceDef;
 
 		def.send(server);
-		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
+		controlNames = def.allControlNames.select({ arg ctl; 
+		    (ctl.name != \out) && (ctl.name != \freq) 
+		});
 		paramValues = Dictionary.with(*controlNames.collect({ arg ctl;
 			ctl.name -> def.controls[ctl.index]
 		}));
 
-		paramValues.keys.do({ |key|
+		paramValues.keys.do({ arg key;
 			this.addCommand(key, "f", { arg msg;
 				paramValues[key] = msg[1];
 			});
@@ -30,11 +32,15 @@ CroneEngineOneshot : CroneEngine {
 		});
 
 		paramKeys = Array.newClear(controlNames.size);
-		controlNames.do({ arg ctl, idx; paramKeys[idx] = ctl.name });
+		controlNames.do({ arg ctl, idx; 
+		    [idx, ctl.name].postln;
+		    paramKeys[idx] = ctl.name;
+		});
 		
-		this.addCommand("voice", Array.fill(paramKeys.size+1, {$f}).asString, { arg msg;
+		this.addCommand("voice", String.fill(paramKeys.size+1, {$f}), { arg msg;
 			var args = [\freq, msg[1]];
 			paramKeys.size.do({ arg idx; args = args ++ [paramKeys[idx], msg[idx+2]]});
+			args.postln;
 			Synth.new(\Moonshine, args);
 		});
 	}

@@ -40,7 +40,9 @@ Engine_Moonshine_v2 : CroneEngine {
 		// (.collect/.select are equivalent to .map/.filter in some other languages)
 		//// a ControlName contains both a symbolic key and a positional index
 		//// \out and \hz are controlled separately, so this line filters them out
-		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
+		controlNames = def.allControlNames.select({ arg ctl; 
+		    (ctl.name != \out) && (ctl.name != \freq) 
+		});
 		//// this line construct a dictionary by first associating ControlName keys to default values from the def
 		paramValues = Dictionary.with(*controlNames.collect({ arg ctl;
 			ctl.name -> def.controls[ctl.index]  // this syntax creates an Association
