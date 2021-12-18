@@ -45,26 +45,28 @@ Engine_Moonshine_v2 : CroneEngine {
 		// where the values are populated with the defaults specified above.
 		// (.collect/.select are equivalent to .map/.filter in some other languages)
 		//// a ControlName contains both a symbolic key and a positional index
-		//// \out and \hz are controlled separately, so this line filters them out
-		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \hz });
+		//// \out and \freq are controlled separately, so this line filters them out
+		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
 		//// this line construct a dictionary by first associating ControlName keys to default values from the def
 		paramValues = Dictionary.with(*controlNames.collect({ arg ctl;
 			ctl.name -> def.controls[ctl.index]  // this syntax creates an Association
 		}));
 
-
+    paramValues.postln;
+    
 		// for each "param," add an engine command,
 		// which sets the current value default value of that param for new synth instances.
-		paramKeys.do({ |key|
-			this.addCommand(key.toString, "f", { arg msg;
-				paramValues[key] = msg[1];
+		paramValues.keys.do({ |key|
+			this.addCommand(key, "f", { arg msg;
+	      paramValues[key] = msg[1];
 			});
 		});
 
 		// the command "hz" will create a new synth with the specifed frequency,
 		// and all other parameters pulled from the param value collection.
 		this.addCommand("hz", "f", { arg msg;
-			var args = [\hz, msg[1]] ++ paramValues.getPairs;
+			var args = [\freq, msg[1]] ++ paramValues.getPairs;
+			args.postln; 
 			Synth.new(\Moonshine, args, Server.default);
 		});
 
@@ -73,7 +75,7 @@ Engine_Moonshine_v2 : CroneEngine {
 		paramKeys = Array.newClear(controlNames.size);
 		controlNames.do({ arg ctl, idx; paramKeys[idx] = ctl.name });
 		this.addCommand("voice", Array.fill(paramKeys.size+1, {$f}).asString, { arg msg;
-			var args = [\hz, msg[1]];
+			var args = [\freq, msg[1]]; 
 			paramKeys.size.do({ arg idx; args = args ++ [paramKeys[idx], msg[idx+2]]});
 			Synth.new(\Moonshine, args, Server.default);
 		});

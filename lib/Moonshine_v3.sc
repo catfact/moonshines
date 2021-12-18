@@ -13,26 +13,27 @@ CroneEngineOneshot : CroneEngine {
 		var def = this.voiceDef;
 
 		def.send(server);
-		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \hz });
+		controlNames = def.allControlNames.select({ arg ctl; ctl.name != \out && ctl.name != \freq });
 		paramValues = Dictionary.with(*controlNames.collect({ arg ctl;
 			ctl.name -> def.controls[ctl.index]
 		}));
 
-		paramKeys.do({ |key|
+		paramValues.keys.do({ |key|
 			this.addCommand(key.toString, "f", { arg msg;
 				paramValues[key] = msg[1];
 			});
 		});
 
 		this.addCommand("hz", "f", { arg msg;
-			var args = [\hz, msg[1]] ++ paramValues.getPairs;
+			var args = [\freq, msg[1]] ++ paramValues.getPairs;
 			Synth.new(\Moonshine, args, Server.default);
 		});
 
 		paramKeys = Array.newClear(controlNames.size);
 		controlNames.do({ arg ctl, idx; paramKeys[idx] = ctl.name });
+		
 		this.addCommand("voice", Array.fill(paramKeys.size+1, {$f}).asString, { arg msg;
-			var args = [\hz, msg[1]];
+			var args = [\freq, msg[1]];
 			paramKeys.size.do({ arg idx; args = args ++ [paramKeys[idx], msg[idx+2]]});
 			Synth.new(\Moonshine, args, Server.default);
 		});
